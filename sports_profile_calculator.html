@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>나만의 스포츠 프로필 계산기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+    body { font-family: Arial; padding: 20px; }
+    h1 { font-size: 28px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    th { background: #f0f0f0; }
+</style>
+</head>
+
+<body>
+
+<h1>나만의 스포츠 프로필 점수 계산기</h1>
+<p>엑셀 파일을 업로드하면 자동으로 점수와 운동 레벨이 계산됩니다.</p>
+
+<input type="file" id="excelFile" accept=".xlsx, .xls">
+
+<table id="resultTable" style="display:none;">
+    <thead>
+        <tr>
+            <th>이메일</th>
+            <th>운동 여부</th>
+            <th>운동 종류 수</th>
+            <th>주당 운동 빈도</th>
+            <th>점수</th>
+            <th>운동 레벨</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+document.getElementById("excelFile").addEventListener("change", function(e){
+    let file = e.target.files[0];
+    let reader = new FileReader();
+
+    reader.onload = function(event){
+        let data = event.target.result;
+        let workbook = XLSX.read(data, {type:'binary'});
+        let sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let json = XLSX.utils.sheet_to_json(sheet);
+
+        let tbody = document.querySelector("#resultTable tbody");
+        tbody.innerHTML = "";
+
+        json.forEach(row => {
+            let email = row["이메일 주소"];
+            let isExercise = row["체육시간 이외에 하는 운동이 있나요?"] || "";
+            let types = row["그러면 어떤 운동을 주로 하나요?(중복 선택 가능)"] || "";
+            let freq = row["얼마나 자주 하나요?(1주일)"] || "";
+
+            let typeCount = types ? types.split(",").length : 0;
+            let freqNum = parseInt(freq) || 0;
+
+            let score = 0;
+            if (isExercise === "네") score += 10;
+            score += typeCount * 5;
+
+            if (freqNum >= 0 && freqNum <= 1) score += 5;
+            else if (freqNum <= 3) score += 10;
+            else if (freqNum <= 5) score += 15;
+            else score += 20;
+
+            let level = "";
+            if (score <= 20) level = "🥉 초급";
+            else if (score <= 40) level = "🥈 중급";
+            else level = "🥇 고급";
+
+            let tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${email}</td>
+                <td>${isExercise}</td>
+                <td>${typeCount}</td>
+                <td>${freqNum}일</td>
+                <td>${score}</td>
+                <td>${level}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById("resultTable").style.display = "table";
+    };
+
+    reader.readAsBinaryString(file);
+});
+</script>
+
+</body>
+</html>
